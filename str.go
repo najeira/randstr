@@ -68,6 +68,13 @@ func CryptoString(n int) string {
 	}
 	return s
 }
+
+func Seed(seed int64) {
+	mutex.Lock()
+	mtSource.Seed(seed)
+	mutex.Unlock()
+}
+
 func mathRandInt63() int64 {
 	mutex.Lock()
 	n := mtSource.Int63()
