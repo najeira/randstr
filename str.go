@@ -3,6 +3,7 @@ package randstr
 import (
 	cryptorand "crypto/rand"
 	mathrand "math/rand"
+	"sync"
 	"time"
 )
 
@@ -14,6 +15,7 @@ const (
 )
 
 var (
+	mutex sync.Mutex
 	mtSource mathrand.Source
 )
 
@@ -25,9 +27,9 @@ func init() {
 // https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
 func String(n int) string {
 	b := make([]byte, n)
-	for i, cache, remain := n-1, mtSource.Int63(), letterIdxMax; i >= 0; {
+	for i, cache, remain := n-1, mathRandInt63(), letterIdxMax; i >= 0; {
 		if remain == 0 {
-			cache, remain = mtSource.Int63(), letterIdxMax
+			cache, remain = mathRandInt63(), letterIdxMax
 		}
 		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
 			b[i] = letterBytes[idx]
@@ -65,4 +67,10 @@ func CryptoString(n int) string {
 		return String(n)
 	}
 	return s
+}
+func mathRandInt63() int64 {
+	mutex.Lock()
+	n := mtSource.Int63()
+	mutex.Unlock()
+	return n
 }
