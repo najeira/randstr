@@ -2,6 +2,8 @@ package randstr
 
 import (
 	cryptorand "crypto/rand"
+	"math"
+	"math/big"
 	mathrand "math/rand"
 	"sync"
 	"time"
@@ -20,7 +22,15 @@ var (
 )
 
 func init() {
-	mtSource = mathrand.NewSource(time.Now().UnixNano())
+	var seed int64
+	bint := big.NewInt(math.MaxInt64)
+	bseed, err := cryptorand.Int(cryptorand.Reader, bint)
+	if bseed != nil && err == nil {
+		seed = bseed.Int64()
+	} else {
+		seed = time.Now().UnixNano()
+	}
+	mtSource = mathrand.NewSource(seed)
 }
 
 // String generates a random string using math/rand
