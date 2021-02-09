@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	mutex sync.Mutex
+	mutex    sync.Mutex
 	mtSource mathrand.Source
 )
 

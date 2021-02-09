@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	genLen = 100
-	loopCount = 100000
+	genLen    = 100
+	loopCount = 1000000
 )
 
 // tests
