@@ -38,6 +38,34 @@ func TestPrivateCryptoString(t *testing.T) {
 	}
 }
 
+func TestNumericString(t *testing.T) {
+	store := make(map[string]bool)
+	for i := 1; i < loopCount; i++ {
+		s := NumericString(genLen)
+		check(t, store, nil, s)
+		for _, c := range s {
+			if c < '0' || '9' < c {
+				t.Error(s)
+				break
+			}
+		}
+	}
+}
+
+func TestCryptoNumericString(t *testing.T) {
+	store := make(map[string]bool)
+	for i := 1; i < loopCount; i++ {
+		s, err := cryptoNumericString(genLen)
+		check(t, store, err, s)
+		for _, c := range s {
+			if c < '0' || '9' < c {
+				t.Error(s)
+				break
+			}
+		}
+	}
+}
+
 func check(t *testing.T, store map[string]bool, err error, s string) {
 	if err != nil {
 		t.Error(err)
@@ -166,5 +194,17 @@ func BenchmarkCryptoPhase3(b *testing.B) {
 func BenchmarkCryptoPhase4(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		cryptoPhase4(genLen)
+	}
+}
+
+func BenchmarkNumericString(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		NumericString(genLen)
+	}
+}
+
+func BenchmarkCryptoNumericString(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		CryptoNumericString(genLen)
 	}
 }

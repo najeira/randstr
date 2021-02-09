@@ -80,6 +80,65 @@ func CryptoString(n int) string {
 	return s
 }
 
+// CryptoNumericString generates a random numeric string using crypto/rand
+func CryptoNumericString(n int) string {
+	s, err := cryptoNumericString(n)
+	if err != nil {
+		return NumericString(n)
+	}
+	return s
+}
+
+// NumericString generates a random numeric string using math/rand
+func NumericString(n int) string {
+	const (
+		letterBytes   = "1234567890"
+		letterCount   = len(letterBytes)
+		letterIdxBits = 5
+		letterIdxMask = 31 // 31 0b11111
+		letterIdxMax  = 30
+		bitsCount     = 63 / letterIdxBits
+	)
+	b := make([]byte, n)
+	for i, cache, remain := n-1, mathRandInt63(), bitsCount; i >= 0; {
+		if remain == 0 {
+			cache, remain = mathRandInt63(), bitsCount
+		}
+		if idx := int(cache & letterIdxMask); idx < letterIdxMax {
+			b[i] = letterBytes[idx%letterCount]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
+	return string(b)
+}
+
+func cryptoNumericString(n int) (string, error) {
+	const (
+		letterBytes   = "1234567890"
+		letterCount   = len(letterBytes)
+		letterIdxMask = 31 // 31 0b11111
+		letterIdxMax  = 30 // 0 - 29
+	)
+	buf := make([]byte, n)
+	if _, err := cryptorand.Read(buf); err != nil {
+		return "", err
+	}
+	for i := 0; i < n; {
+		idx := int(buf[i] & letterIdxMask)
+		if idx < letterIdxMax {
+			buf[i] = letterBytes[idx%letterCount]
+			i++
+		} else {
+			if _, err := cryptorand.Read(buf[i : i+1]); err != nil {
+				return "", err
+			}
+		}
+	}
+	return string(buf), nil
+}
+
 func Seed(seed int64) {
 	mutex.Lock()
 	mtSource.Seed(seed)
