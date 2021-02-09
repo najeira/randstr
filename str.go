@@ -11,6 +11,7 @@ import (
 
 const (
 	letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+	letterCount   = len(letterBytes)
 	letterIdxBits = 6
 	letterIdxMask = 0x3F // 63 0b111111
 	letterIdxMax  = 63 / letterIdxBits
@@ -41,7 +42,7 @@ func String(n int) string {
 		if remain == 0 {
 			cache, remain = mathRandInt63(), letterIdxMax
 		}
-		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+		if idx := int(cache & letterIdxMask); idx < letterCount {
 			b[i] = letterBytes[idx]
 			i--
 		}
@@ -58,7 +59,7 @@ func cryptoString(n int) (string, error) {
 	}
 	for i := 0; i < n; {
 		idx := int(buf[i] & letterIdxMask)
-		if idx < len(letterBytes) {
+		if idx < letterCount {
 			buf[i] = letterBytes[idx]
 			i++
 		} else {
