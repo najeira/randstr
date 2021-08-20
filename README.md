@@ -19,11 +19,13 @@ s := CryptoString(10)
 ## Benchmark
 
 ```
-BenchmarkString-4                5000000               306 ns/op             224 B/op          2 allocs/op
-BenchmarkCryptoString-4           200000              8272 ns/op             224 B/op          2 allocs/op
+BenchmarkString-8                	 4250818	       279.7 ns/op	     112 B/op	       1 allocs/op
+BenchmarkCryptoString-8          	 3017208	       383.5 ns/op	     224 B/op	       2 allocs/op
+BenchmarkNumericString-8         	 3273469	       367.1 ns/op	     112 B/op	       1 allocs/op
+BenchmarkCryptoNumericString-8   	 2707904	       445.6 ns/op	     224 B/op	       2 allocs/op
 ```
 
-on Macbook Pro 3.3 GHz Intel Core i7
+on Mac mini (M1, 2020) Apple M1 16 GB
 
 ## License
 
