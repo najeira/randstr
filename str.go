@@ -109,26 +109,35 @@ func CryptoNumericString(n int) string {
 // NumericString generates a random numeric string using math/rand
 func NumericString(n int) string {
 	const (
-		letterBytes   = "1234567890"
-		letterCount   = len(letterBytes)
-		letterIdxBits = 5
-		letterIdxMask = 31 // 31 0b11111
-		letterIdxMax  = 30
-		bitsCount     = 63 / letterIdxBits
+		letterBytes    = "1234567890"
+		letterCount    = len(letterBytes)
+		letterIdxMask  = 0x1F // 31 0b11111
+		letterIdxBits  = 5    // number of bits in letterIdxMask
+		letterIdxMax   = 30   // multiples of letterCount
+		letterIdxTimes = 63 / letterIdxBits
 	)
-	b := make([]byte, n)
-	for i, cache, remain := n-1, mathRandInt63(), bitsCount; i >= 0; {
+	var (
+		sb     strings.Builder
+		i      int
+		cache  int64
+		remain int
+	)
+	sb.Grow(n)
+	for i < n {
 		if remain == 0 {
-			cache, remain = mathRandInt63(), bitsCount
+			cache, remain = mathRandInt63(), letterIdxTimes
 		}
-		if idx := int(cache & letterIdxMask); idx < letterIdxMax {
-			b[i] = letterBytes[idx%letterCount]
-			i--
+
+		idx := int(cache & letterIdxMask)
+		if idx < letterIdxMax {
+			sb.WriteByte(letterBytes[idx%letterCount])
+			i++
 		}
+
 		cache >>= letterIdxBits
 		remain--
 	}
-	return string(b)
+	return sb.String()
 }
 
 func cryptoNumericString(n int) (string, error) {
