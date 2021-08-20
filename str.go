@@ -61,22 +61,31 @@ func String(n int) string {
 }
 
 func cryptoString(n int) (string, error) {
-	buf := make([]byte, n)
+	buf := make([]byte, n*9/8)
 	if _, err := cryptorand.Read(buf); err != nil {
 		return "", err
 	}
-	for i := 0; i < n; {
-		idx := int(buf[i] & letterIdxMask)
+	var (
+		i      int
+		pos    int
+		bufLen = len(buf)
+	)
+	for i < n {
+		if pos >= bufLen {
+			if _, err := cryptorand.Read(buf[i:]); err != nil {
+				return "", err
+			}
+			pos = i
+		}
+
+		idx := int(buf[pos] & letterIdxMask)
+		pos++
 		if idx < letterCount {
 			buf[i] = letterBytes[idx]
 			i++
-		} else {
-			if _, err := cryptorand.Read(buf[i : i+1]); err != nil {
-				return "", err
-			}
 		}
 	}
-	return string(buf), nil
+	return string(buf[:n]), nil
 }
 
 // CryptoString generates a random string using crypto/rand
