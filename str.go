@@ -5,16 +5,17 @@ import (
 	"math"
 	"math/big"
 	mathrand "math/rand"
+	"strings"
 	"sync"
 	"time"
 )
 
 const (
-	letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
-	letterCount   = len(letterBytes)
-	letterIdxBits = 6
-	letterIdxMask = 0x3F // 63 0b111111
-	letterIdxMax  = 63 / letterIdxBits
+	letterBytes    = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+	letterCount    = len(letterBytes)
+	letterIdxMask  = 0x3F // 63 0b111111
+	letterIdxBits  = 6    // number of bits in letterIdxMask
+	letterIdxTimes = 63 / letterIdxBits
 )
 
 var (
@@ -37,19 +38,26 @@ func init() {
 // String generates a random string using math/rand
 // https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
 func String(n int) string {
-	b := make([]byte, n)
-	for i, cache, remain := n-1, mathRandInt63(), letterIdxMax; i >= 0; {
+	var (
+		sb     strings.Builder
+		i      int
+		cache  int64
+		remain int
+	)
+	sb.Grow(n)
+	for i < n {
 		if remain == 0 {
-			cache, remain = mathRandInt63(), letterIdxMax
+			cache, remain = mathRandInt63(), letterIdxTimes
 		}
-		if idx := int(cache & letterIdxMask); idx < letterCount {
-			b[i] = letterBytes[idx]
-			i--
+		idx := int(cache & letterIdxMask)
+		if idx < letterCount {
+			sb.WriteByte(letterBytes[idx])
+			i++
 		}
 		cache >>= letterIdxBits
 		remain--
 	}
-	return string(b)
+	return sb.String()
 }
 
 func cryptoString(n int) (string, error) {

@@ -147,7 +147,7 @@ func cryptoPhase4(n int) string {
 			if err != nil {
 				panic(err)
 			}
-			remain = letterIdxMax
+			remain = letterIdxTimes
 		}
 		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
 			b[i] = letterBytes[idx]
@@ -169,7 +169,7 @@ func BenchmarkString(b *testing.B) {
 
 func BenchmarkCryptoString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		cryptoString(genLen)
+		_, _ = cryptoString(genLen)
 	}
 }
 
