@@ -20,15 +20,26 @@ func TestString(t *testing.T) {
 	store := make(map[string]bool)
 	for i := 1; i < loopCount; i++ {
 		s := randstr.String(genLen)
-		check(t, store, nil, s)
+		check(t, store, nil, s, false)
 	}
+}
+
+func TestStringVariation(t *testing.T) {
+	store := make(map[rune]int)
+	for i := 1; i < loopCount; i++ {
+		s := randstr.String(genLen)
+		for _, r := range s {
+			store[r]++
+		}
+	}
+	checkVariation(t, store)
 }
 
 func TestCryptoString(t *testing.T) {
 	store := make(map[string]bool)
 	for i := 1; i < loopCount; i++ {
 		s := randstr.CryptoString(genLen)
-		check(t, store, nil, s)
+		check(t, store, nil, s, false)
 	}
 }
 
@@ -36,39 +47,66 @@ func TestPrivateCryptoString(t *testing.T) {
 	store := make(map[string]bool)
 	for i := 1; i < loopCount; i++ {
 		s, err := randstr.ExportCryptoString(genLen)
-		check(t, store, err, s)
+		check(t, store, err, s, false)
 	}
+}
+
+func TestCryptoStringVariation(t *testing.T) {
+	store := make(map[rune]int)
+	for i := 1; i < loopCount; i++ {
+		s, err := randstr.ExportCryptoString(genLen)
+		if err != nil {
+			t.Error(err)
+		}
+		for _, r := range s {
+			store[r]++
+		}
+	}
+	checkVariation(t, store)
 }
 
 func TestNumericString(t *testing.T) {
 	store := make(map[string]bool)
 	for i := 1; i < loopCount; i++ {
 		s := randstr.NumericString(genLen)
-		check(t, store, nil, s)
-		for _, c := range s {
-			if c < '0' || '9' < c {
-				t.Error(s)
-				break
-			}
+		check(t, store, nil, s, true)
+	}
+}
+
+func TestNumericStringVariation(t *testing.T) {
+	store := make(map[rune]int)
+	for i := 1; i < loopCount; i++ {
+		s := randstr.NumericString(genLen)
+		for _, r := range s {
+			store[r]++
 		}
 	}
+	checkVariation(t, store)
 }
 
 func TestCryptoNumericString(t *testing.T) {
 	store := make(map[string]bool)
 	for i := 1; i < loopCount; i++ {
 		s, err := randstr.ExportCryptoNumericString(genLen)
-		check(t, store, err, s)
-		for _, c := range s {
-			if c < '0' || '9' < c {
-				t.Error(s)
-				break
-			}
-		}
+		check(t, store, err, s, true)
 	}
 }
 
-func check(t *testing.T, store map[string]bool, err error, s string) {
+func TestCryptoNumericStringVariation(t *testing.T) {
+	store := make(map[rune]int)
+	for i := 1; i < loopCount; i++ {
+		s, err := randstr.ExportCryptoNumericString(genLen)
+		if err != nil {
+			t.Error(err)
+		}
+		for _, r := range s {
+			store[r]++
+		}
+	}
+	checkVariation(t, store)
+}
+
+func check(t *testing.T, store map[string]bool, err error, s string, numeric bool) {
 	if err != nil {
 		t.Error(err)
 	} else if _, exists := store[s]; exists {
@@ -76,17 +114,42 @@ func check(t *testing.T, store map[string]bool, err error, s string) {
 	} else if len(s) != genLen {
 		t.Errorf("invalid length %s", s)
 	} else {
+		var invalid bool
 		for i := range s {
 			if r := s[i]; '0' <= r && r <= '9' {
 				// ok
-			} else if 'A' <= r && r <= 'z' {
+			} else if 'A' <= r && r <= 'z' && !numeric {
 				// ok
 			} else {
-				t.Errorf("invalid character %s", s)
+				invalid = true
 			}
+		}
+		if invalid {
+				t.Errorf("invalid character %s", s)
 		}
 	}
 	store[s] = true
+}
+
+func checkVariation(t *testing.T, store map[rune]int) {
+	var max, min int
+	for _, n := range store {
+		if n > max {
+			max = n
+		}
+		if n < min || min == 0 {
+			min = n
+		}
+	}
+	diff := max - min
+
+	total := loopCount * genLen
+	avg := total / len(store)
+	threshold := avg * 3 / 100
+	if diff > threshold {
+		t.Errorf("%d %d", min, max)
+	}
+	//println(max, "-", min, "=", diff, "<", threshold)
 }
 
 // other implementasions
