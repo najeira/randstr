@@ -207,6 +207,6 @@ func BenchmarkNumericString(b *testing.B) {
 
 func BenchmarkCryptoNumericString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		randstr.CryptoNumericString(genLen)
+		_, _ = randstr.ExportCryptoNumericString(genLen)
 	}
 }
