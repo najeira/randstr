@@ -5,16 +5,24 @@ import (
 	"math"
 	"math/big"
 	mathrand "math/rand"
+	"strings"
 	"sync"
 	"time"
 )
 
 const (
-	letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
-	letterCount   = len(letterBytes)
-	letterIdxBits = 6
-	letterIdxMask = 0x3F // 63 0b111111
-	letterIdxMax  = 63 / letterIdxBits
+	letterBytes    = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+	letterCount    = len(letterBytes)
+	letterIdxMask  = 0x3F // 63 0b111111
+	letterIdxBits  = 6    // number of bits in letterIdxMask
+	letterIdxTimes = 63 / letterIdxBits
+
+	numericBytes    = "1234567890"
+	numericCount    = len(numericBytes)
+	numericIdxMask  = 0x1F // 31 0b11111
+	numericIdxBits  = 5    // number of bits in numericIdxMask
+	numericIdxMax   = 30   // multiples of numericCount
+	numericIdxTimes = 63 / numericIdxBits
 )
 
 var (
@@ -37,38 +45,51 @@ func init() {
 // String generates a random string using math/rand
 // https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-golang
 func String(n int) string {
-	b := make([]byte, n)
-	for i, cache, remain := n-1, mathRandInt63(), letterIdxMax; i >= 0; {
+	var (
+		sb     strings.Builder
+		i      int
+		cache  int64
+		remain int
+	)
+	sb.Grow(n)
+	for i < n {
 		if remain == 0 {
-			cache, remain = mathRandInt63(), letterIdxMax
+			cache, remain = mathRandInt63(), letterIdxTimes
 		}
-		if idx := int(cache & letterIdxMask); idx < letterCount {
-			b[i] = letterBytes[idx]
-			i--
+		idx := int(cache & letterIdxMask)
+		if idx < letterCount {
+			sb.WriteByte(letterBytes[idx])
+			i++
 		}
 		cache >>= letterIdxBits
 		remain--
 	}
-	return string(b)
+	return sb.String()
 }
 
 func cryptoString(n int) (string, error) {
-	buf := make([]byte, n)
-	if _, err := cryptorand.Read(buf); err != nil {
-		return "", err
-	}
-	for i := 0; i < n; {
-		idx := int(buf[i] & letterIdxMask)
+	buf := make([]byte, n*9/8)
+	var (
+		i      int
+		bufLen = len(buf)
+		pos    = bufLen
+	)
+	for i < n {
+		if pos >= bufLen {
+			if _, err := cryptorand.Read(buf[i:]); err != nil {
+				return "", err
+			}
+			pos = i
+		}
+
+		idx := int(buf[pos] & letterIdxMask)
+		pos++
 		if idx < letterCount {
 			buf[i] = letterBytes[idx]
 			i++
-		} else {
-			if _, err := cryptorand.Read(buf[i : i+1]); err != nil {
-				return "", err
-			}
 		}
 	}
-	return string(buf), nil
+	return string(buf[:n]), nil
 }
 
 // CryptoString generates a random string using crypto/rand
@@ -91,52 +112,53 @@ func CryptoNumericString(n int) string {
 
 // NumericString generates a random numeric string using math/rand
 func NumericString(n int) string {
-	const (
-		letterBytes   = "1234567890"
-		letterCount   = len(letterBytes)
-		letterIdxBits = 5
-		letterIdxMask = 31 // 31 0b11111
-		letterIdxMax  = 30
-		bitsCount     = 63 / letterIdxBits
+	var (
+		sb     strings.Builder
+		i      int
+		cache  int64
+		remain int
 	)
-	b := make([]byte, n)
-	for i, cache, remain := n-1, mathRandInt63(), bitsCount; i >= 0; {
+	sb.Grow(n)
+	for i < n {
 		if remain == 0 {
-			cache, remain = mathRandInt63(), bitsCount
+			cache, remain = mathRandInt63(), numericIdxTimes
 		}
-		if idx := int(cache & letterIdxMask); idx < letterIdxMax {
-			b[i] = letterBytes[idx%letterCount]
-			i--
+
+		idx := int(cache & numericIdxMask)
+		if idx < numericIdxMax {
+			sb.WriteByte(numericBytes[idx%numericCount])
+			i++
 		}
-		cache >>= letterIdxBits
+
+		cache >>= numericIdxBits
 		remain--
 	}
-	return string(b)
+	return sb.String()
 }
 
 func cryptoNumericString(n int) (string, error) {
-	const (
-		letterBytes   = "1234567890"
-		letterCount   = len(letterBytes)
-		letterIdxMask = 31 // 31 0b11111
-		letterIdxMax  = 30 // 0 - 29
+	buf := make([]byte, n*9/8)
+	var (
+		i      int
+		bufLen = len(buf)
+		pos    = bufLen
 	)
-	buf := make([]byte, n)
-	if _, err := cryptorand.Read(buf); err != nil {
-		return "", err
-	}
-	for i := 0; i < n; {
-		idx := int(buf[i] & letterIdxMask)
-		if idx < letterIdxMax {
-			buf[i] = letterBytes[idx%letterCount]
-			i++
-		} else {
-			if _, err := cryptorand.Read(buf[i : i+1]); err != nil {
+	for i < n {
+		if pos >= bufLen {
+			if _, err := cryptorand.Read(buf[i:]); err != nil {
 				return "", err
 			}
+			pos = i
+		}
+
+		idx := int(buf[pos] & numericIdxMask)
+		pos++
+		if idx < numericIdxMax {
+			buf[i] = numericBytes[idx%numericCount]
+			i++
 		}
 	}
-	return string(buf), nil
+	return string(buf[:n]), nil
 }
 
 func Seed(seed int64) {

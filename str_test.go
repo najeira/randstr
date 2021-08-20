@@ -1,10 +1,12 @@
-package randstr
+package randstr_test
 
 import (
 	cryptorand "crypto/rand"
 	"encoding/binary"
 	"math/big"
 	"testing"
+
+	"github.com/najeira/randstr"
 )
 
 const (
@@ -17,56 +19,94 @@ const (
 func TestString(t *testing.T) {
 	store := make(map[string]bool)
 	for i := 1; i < loopCount; i++ {
-		s := String(genLen)
-		check(t, store, nil, s)
+		s := randstr.String(genLen)
+		check(t, store, nil, s, false)
 	}
+}
+
+func TestStringVariation(t *testing.T) {
+	store := make(map[rune]int)
+	for i := 1; i < loopCount; i++ {
+		s := randstr.String(genLen)
+		for _, r := range s {
+			store[r]++
+		}
+	}
+	checkVariation(t, store)
 }
 
 func TestCryptoString(t *testing.T) {
 	store := make(map[string]bool)
 	for i := 1; i < loopCount; i++ {
-		s := CryptoString(genLen)
-		check(t, store, nil, s)
+		s := randstr.CryptoString(genLen)
+		check(t, store, nil, s, false)
 	}
 }
 
 func TestPrivateCryptoString(t *testing.T) {
 	store := make(map[string]bool)
 	for i := 1; i < loopCount; i++ {
-		s, err := cryptoString(genLen)
-		check(t, store, err, s)
+		s, err := randstr.ExportCryptoString(genLen)
+		check(t, store, err, s, false)
 	}
+}
+
+func TestCryptoStringVariation(t *testing.T) {
+	store := make(map[rune]int)
+	for i := 1; i < loopCount; i++ {
+		s, err := randstr.ExportCryptoString(genLen)
+		if err != nil {
+			t.Error(err)
+		}
+		for _, r := range s {
+			store[r]++
+		}
+	}
+	checkVariation(t, store)
 }
 
 func TestNumericString(t *testing.T) {
 	store := make(map[string]bool)
 	for i := 1; i < loopCount; i++ {
-		s := NumericString(genLen)
-		check(t, store, nil, s)
-		for _, c := range s {
-			if c < '0' || '9' < c {
-				t.Error(s)
-				break
-			}
+		s := randstr.NumericString(genLen)
+		check(t, store, nil, s, true)
+	}
+}
+
+func TestNumericStringVariation(t *testing.T) {
+	store := make(map[rune]int)
+	for i := 1; i < loopCount; i++ {
+		s := randstr.NumericString(genLen)
+		for _, r := range s {
+			store[r]++
 		}
 	}
+	checkVariation(t, store)
 }
 
 func TestCryptoNumericString(t *testing.T) {
 	store := make(map[string]bool)
 	for i := 1; i < loopCount; i++ {
-		s, err := cryptoNumericString(genLen)
-		check(t, store, err, s)
-		for _, c := range s {
-			if c < '0' || '9' < c {
-				t.Error(s)
-				break
-			}
-		}
+		s, err := randstr.ExportCryptoNumericString(genLen)
+		check(t, store, err, s, true)
 	}
 }
 
-func check(t *testing.T, store map[string]bool, err error, s string) {
+func TestCryptoNumericStringVariation(t *testing.T) {
+	store := make(map[rune]int)
+	for i := 1; i < loopCount; i++ {
+		s, err := randstr.ExportCryptoNumericString(genLen)
+		if err != nil {
+			t.Error(err)
+		}
+		for _, r := range s {
+			store[r]++
+		}
+	}
+	checkVariation(t, store)
+}
+
+func check(t *testing.T, store map[string]bool, err error, s string, numeric bool) {
 	if err != nil {
 		t.Error(err)
 	} else if _, exists := store[s]; exists {
@@ -74,17 +114,42 @@ func check(t *testing.T, store map[string]bool, err error, s string) {
 	} else if len(s) != genLen {
 		t.Errorf("invalid length %s", s)
 	} else {
+		var invalid bool
 		for i := range s {
 			if r := s[i]; '0' <= r && r <= '9' {
 				// ok
-			} else if 'A' <= r && r <= 'z' {
+			} else if 'A' <= r && r <= 'z' && !numeric {
 				// ok
 			} else {
-				t.Errorf("invalid character %s", s)
+				invalid = true
 			}
+		}
+		if invalid {
+				t.Errorf("invalid character %s", s)
 		}
 	}
 	store[s] = true
+}
+
+func checkVariation(t *testing.T, store map[rune]int) {
+	var max, min int
+	for _, n := range store {
+		if n > max {
+			max = n
+		}
+		if n < min || min == 0 {
+			min = n
+		}
+	}
+	diff := max - min
+
+	total := loopCount * genLen
+	avg := total / len(store)
+	threshold := avg * 3 / 100
+	if diff > threshold {
+		t.Errorf("%d %d", min, max)
+	}
+	//println(max, "-", min, "=", diff, "<", threshold)
 }
 
 // other implementasions
@@ -92,13 +157,13 @@ func check(t *testing.T, store map[string]bool, err error, s string) {
 func cryptoPhase1(n int) string {
 	buf := make([]byte, n)
 	max := new(big.Int)
-	max.SetInt64(int64(len(letterBytes)))
+	max.SetInt64(int64(len(randstr.LetterBytes)))
 	for i := range buf {
 		r, err := cryptorand.Int(cryptorand.Reader, max)
 		if err != nil {
 			panic(err)
 		}
-		buf[i] = letterBytes[r.Int64()]
+		buf[i] = randstr.LetterBytes[r.Int64()]
 	}
 	return string(buf)
 }
@@ -110,9 +175,9 @@ func cryptoPhase2(n int) string {
 		if _, err := cryptorand.Read(src); err != nil {
 			panic(err)
 		}
-		idx := int(src[0] & letterIdxMask)
-		if idx < len(letterBytes) {
-			buf[i] = letterBytes[idx]
+		idx := int(src[0] & randstr.LetterIdxMask)
+		if idx < len(randstr.LetterBytes) {
+			buf[i] = randstr.LetterBytes[idx]
 			i++
 		}
 	}
@@ -129,9 +194,9 @@ func cryptoPhase3(n int) string {
 				panic(err)
 			}
 		}
-		idx := int(src[pos] & letterIdxMask)
-		if idx < len(letterBytes) {
-			buf[i] = letterBytes[idx]
+		idx := int(src[pos] & randstr.LetterIdxMask)
+		if idx < len(randstr.LetterBytes) {
+			buf[i] = randstr.LetterBytes[idx]
 			i++
 		}
 	}
@@ -147,10 +212,10 @@ func cryptoPhase4(n int) string {
 			if err != nil {
 				panic(err)
 			}
-			remain = letterIdxMax
+			remain = randstr.LetterIdxTimes
 		}
-		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
-			b[i] = letterBytes[idx]
+		if idx := int(cache & randstr.LetterIdxMask); idx < len(randstr.LetterBytes) {
+			b[i] = randstr.LetterBytes[idx]
 			i--
 		}
 		cache >>= 6
@@ -163,13 +228,13 @@ func cryptoPhase4(n int) string {
 
 func BenchmarkString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		String(genLen)
+		randstr.String(genLen)
 	}
 }
 
 func BenchmarkCryptoString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		cryptoString(genLen)
+		_, _ = randstr.ExportCryptoString(genLen)
 	}
 }
 
@@ -199,12 +264,12 @@ func BenchmarkCryptoPhase4(b *testing.B) {
 
 func BenchmarkNumericString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NumericString(genLen)
+		randstr.NumericString(genLen)
 	}
 }
 
 func BenchmarkCryptoNumericString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		CryptoNumericString(genLen)
+		_, _ = randstr.ExportCryptoNumericString(genLen)
 	}
 }
